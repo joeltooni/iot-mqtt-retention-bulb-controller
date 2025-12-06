@@ -1,0 +1,14 @@
+{
+  "name": "project2-part5",
+  "version": "1.0.0",
+  "description": "Photon2 light level visualizer with Google Charts",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "author": "",
+  "license": "ISC"
+}

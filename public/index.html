@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>MQTT Message Retention</title>
+    <!-- bringing in the MQTT library to subscribe and receive light level data -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <!-- bringing in Google Charts library for gauge -->
+    <script
+      type="text/javascript"
+      src="https://www.gstatic.com/charts/loader.js"
+    ></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .container {
+        max-width: 600px;
+        width: 90%;
+        background: white;
+        padding: 40px;
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        text-align: center;
+      }
+
+      h1 {
+        color: #333;
+        margin-bottom: 10px;
+        font-size: 32px;
+      }
+
+      #clientInfo {
+        color: #666;
+        font-style: italic;
+        margin-bottom: 30px;
+        padding: 10px;
+        background-color: #f0f0f0;
+        border-radius: 5px;
+        font-size: 14px;
+      }
+
+      #clientId {
+        font-weight: bold;
+        color: #667eea;
+        font-family: "Courier New", monospace;
+      }
+
+      #connectionStatus {
+        display: block;
+        margin-top: 5px;
+        font-size: 13px;
+      }
+
+      .status-connected {
+        color: #4caf50;
+        font-weight: bold;
+      }
+
+      .status-connecting {
+        color: #ff9800;
+        font-weight: bold;
+      }
+
+      .status-disconnected {
+        color: #f44336;
+        font-weight: bold;
+      }
+
+      #readableTime {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+        font-style: italic;
+      }
+
+      .bulb-container {
+        position: relative;
+        margin: 40px auto;
+        width: 200px;
+        height: 200px;
+      }
+
+      .bulb {
+        width: 120px;
+        height: 120px;
+        background: #ddd;
+        border-radius: 50%;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        transition: all 0.3s ease;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+      }
+
+      .bulb.on {
+        background: #ffd700;
+        box-shadow: 0 0 40px #ffd700, 0 0 80px #ffd700, 0 0 120px #ffd700;
+        animation: glow 1.5s ease-in-out infinite alternate;
+      }
+
+      @keyframes glow {
+        from {
+          box-shadow: 0 0 40px #ffd700, 0 0 80px #ffd700, 0 0 120px #ffd700;
+        }
+        to {
+          box-shadow: 0 0 50px #ffd700, 0 0 100px #ffd700, 0 0 150px #ffd700;
+        }
+      }
+
+      .switch-container {
+        margin: 40px auto;
+      }
+
+      .switch-label {
+        font-size: 20px;
+        color: #333;
+        margin-bottom: 20px;
+        font-weight: bold;
+      }
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 80px;
+        height: 40px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.4s;
+        border-radius: 40px;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 32px;
+        width: 32px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+
+      input:checked + .slider {
+        background-color: #667eea;
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(40px);
+      }
+
+      #currentValue {
+        font-size: 18px;
+        color: #333;
+        margin: 30px 0;
+        font-weight: bold;
+      }
+
+      .gauge-container {
+        margin: 30px auto;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #gaugeChart {
+        width: 200px;
+        height: 200px;
+      }
+
+      #gaugeChart > div {
+        margin: 0 auto;
+      }
+
+      .divider {
+        width: 100%;
+        height: 1px;
+        background: linear-gradient(to right, transparent, #ddd, transparent);
+        margin: 40px 0;
+      }
+
+      #arrivingData {
+        margin: 20px 0;
+        padding: 15px;
+        background-color: #f9f9f9;
+        border-radius: 10px;
+        border: 1px solid #ddd;
+      }
+
+      #arrivingData h3 {
+        margin-top: 0;
+        color: #333;
+        font-size: 16px;
+      }
+
+      #dataString {
+        font-family: "Courier New", monospace;
+        font-size: 13px;
+        color: #333;
+        background-color: #fff;
+        padding: 10px;
+        border-radius: 5px;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>MQTT Message Retention</h1>
+
+      <!-- this displays the automatically generated unique client ID -->
+      <div id="clientInfo">
+        Client ID: <span id="clientId">Generating...</span>
+        <span id="connectionStatus" class="status-connecting"
+          >⚡ Connecting to Photon2...</span
+        >
+      </div>
+
+      <!-- Bulb visualization -->
+      <div class="bulb-container">
+        <div class="bulb" id="bulb"></div>
+      </div>
+
+      <!-- Switch to control the bulb -->
+      <div class="switch-container">
+        <div class="switch-label">Control LED</div>
+        <label class="switch">
+          <input type="checkbox" id="ledSwitch" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Divider -->
+      <div class="divider"></div>
+
+      <div id="currentValue">Light Level: --</div>
+
+      <!-- Gauge chart to show light level -->
+      <div class="gauge-container">
+        <div id="gaugeChart" style="margin: 0 auto"></div>
+      </div>
+
+      <!-- displaying the raw arriving data string from MQTT -->
+      <div id="arrivingData">
+        <h3>Arriving Data:</h3>
+        <div id="readableTime">--</div>
+        <div id="dataString">--</div>
+      </div>
+    </div>
+
+    <script type="text/javascript">
+      // this stores the MQTT client and gauge chart globally
+      let client = null;
+      let gaugeChart = null;
+      let gaugeData = null;
+      let gaugeOptions = null;
+
+      // defining the actual light range in my room based on sensor readings
+      const ROOM_MAX_LIGHT = 130;
+
+      // Connection timeout in milliseconds (time without data before marking as disconnected)
+      const CONNECTION_TIMEOUT = 8000; // 8 seconds
+
+      // generating a unique random client ID for this browser session
+      const clientId = Math.random().toString(36).substr(2, 9);
+
+      // this displays the generated client ID to the user
+      document.getElementById("clientId").textContent = clientId;
+
+      // Get references to DOM elements
+      const bulb = document.getElementById("bulb");
+      const ledSwitch = document.getElementById("ledSwitch");
+      const currentValue = document.getElementById("currentValue");
+      const dataString = document.getElementById("dataString");
+      const connectionStatus = document.getElementById("connectionStatus");
+      const readableTime = document.getElementById("readableTime");
+
+      // Track connection state
+      let isFirstMessage = true;
+      let dataTimestamp = null;
+      let timeAgoInterval = null;
+
+      // Function to calculate time ago
+      function getTimeAgo(timestamp) {
+        const now = Date.now();
+        const diff = now - timestamp;
+        const seconds = Math.floor(diff / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+
+        if (seconds < 60)
+          return `${seconds} second${seconds !== 1 ? "s" : ""} ago`;
+        if (minutes < 60)
+          return `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
+        if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
+        return `${days} day${days !== 1 ? "s" : ""} ago`;
+      }
+
+      // Function to update connection status
+      function updateConnectionStatus(status, timeAgo = null) {
+        connectionStatus.className = "";
+        if (status === "connected") {
+          connectionStatus.className = "status-connected";
+          connectionStatus.innerHTML = "✓ Connected to Photon2";
+          // Enable LED switch when connected
+          ledSwitch.disabled = false;
+        } else if (status === "connecting") {
+          connectionStatus.className = "status-connecting";
+          connectionStatus.innerHTML = "⚡ Connecting to Photon2...";
+          // Disable LED switch while connecting
+          ledSwitch.disabled = true;
+        } else if (status === "stale") {
+          connectionStatus.className = "status-disconnected";
+          connectionStatus.innerHTML = `✗ Disconnected (Last seen: ${timeAgo})`;
+          // Disable LED switch when disconnected
+          ledSwitch.disabled = true;
+        } else {
+          connectionStatus.className = "status-disconnected";
+          connectionStatus.innerHTML = "✗ Disconnected from Photon2";
+          // Disable LED switch when disconnected
+          ledSwitch.disabled = true;
+        }
+      }
+
+      // Function to format timestamp to readable format
+      function formatTimestamp(isoString) {
+        const date = new Date(isoString);
+        const options = {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true,
+        };
+        return date.toLocaleString("en-US", options);
+      }
+
+      // Update "time ago" display and check connection status
+      function updateTimeAgoDisplay() {
+        if (dataTimestamp) {
+          const timeAgo = getTimeAgo(dataTimestamp);
+          const timeSinceLastMessage = Date.now() - dataTimestamp;
+
+          // If more than CONNECTION_TIMEOUT, show disconnected with time ago
+          if (timeSinceLastMessage > CONNECTION_TIMEOUT) {
+            updateConnectionStatus("stale", timeAgo);
+          }
+        }
+      }
+
+      // Load Google Charts and initialize
+      google.charts.load("current", { packages: ["gauge"] });
+      google.charts.setOnLoadCallback(initializeGauge);
+
+      function initializeGauge() {
+        gaugeData = google.visualization.arrayToDataTable([
+          ["Label", "Value"],
+          ["Light", 0],
+        ]);
+
+        gaugeOptions = {
+          width: 400,
+          height: 200,
+          redFrom: 87,
+          redTo: 130,
+          yellowFrom: 43,
+          yellowTo: 87,
+          greenFrom: 0,
+          greenTo: 43,
+          minorTicks: 5,
+          max: ROOM_MAX_LIGHT,
+          redColor: "#FFEB3B",
+          yellowColor: "#FFA726",
+          greenColor: "#424242",
+        };
+
+        gaugeChart = new google.visualization.Gauge(
+          document.getElementById("gaugeChart")
+        );
+        gaugeChart.draw(gaugeData, gaugeOptions);
+
+        // Connect to MQTT after gauge is ready
+        connectToMQTT();
+      }
+
+      // Handle LED switch toggle
+      ledSwitch.addEventListener("change", function () {
+        const isOn = ledSwitch.checked;
+
+        // Update bulb visualization
+        if (isOn) {
+          bulb.classList.add("on");
+        } else {
+          bulb.classList.remove("on");
+        }
+
+        // Publish LED control message to MQTT with retain flag
+        if (client && client.isConnected()) {
+          const message = new Paho.MQTT.Message(
+            JSON.stringify({
+              led: isOn ? "ON" : "OFF",
+              clientId: clientId,
+              timestamp: new Date().toISOString(),
+            })
+          );
+          message.destinationName = "Photon2LEDControl";
+          message.retained = true; // Enable retain flag
+          message.qos = 1; // QoS level 1 for reliable delivery
+          client.send(message);
+          console.log("Sent LED command:", isOn ? "ON" : "OFF");
+        }
+      });
+
+      // this function establishes connection to MQTT broker with the randomly generated client ID
+      function connectToMQTT() {
+        // establishing a connection to the MQTT broker using the Paho library
+        // using window.location.hostname to automatically use the current host (works for both localhost and network IP)
+        client = new Paho.MQTT.Client(
+          window.location.hostname,
+          Number(9002),
+          "/mqtt",
+          clientId
+        );
+
+        // Start connection check interval (runs every 0.5 seconds for instant detection)
+        if (timeAgoInterval) clearInterval(timeAgoInterval);
+        timeAgoInterval = setInterval(updateTimeAgoDisplay, 500);
+
+        // this handles incoming messages from the broker
+        client.onMessageArrived = function (message) {
+          const topic = message.destinationName;
+          const rawJson = message.payloadString;
+          const data = JSON.parse(rawJson);
+
+          // Handle LED control messages (from other clients)
+          if (topic === "Photon2LEDControl") {
+            const ledState = data.led;
+            const fromClient = data.clientId;
+
+            // Only update if message is from a different client
+            if (fromClient !== clientId) {
+              const isOn = ledState === "ON";
+              ledSwitch.checked = isOn;
+
+              // Update bulb visualization
+              if (isOn) {
+                bulb.classList.add("on");
+              } else {
+                bulb.classList.remove("on");
+              }
+
+              console.log("LED state synchronized from client:", fromClient);
+            }
+            return; // Don't process LED messages as light data
+          }
+
+          // Handle light level messages
+          const lightReading = parseInt(data.lightReading);
+
+          // displaying the raw arriving data string
+          dataString.textContent = rawJson;
+
+          // Check if this is a retained message (old data)
+          if (data.timestamp) {
+            const messageTime = new Date(data.timestamp).getTime();
+            dataTimestamp = messageTime;
+            const timeSinceMessage = Date.now() - messageTime;
+
+            // If first message and it's old (retained), show it's stale data
+            if (isFirstMessage && timeSinceMessage > CONNECTION_TIMEOUT) {
+              const timeAgo = getTimeAgo(messageTime);
+              updateConnectionStatus("stale", timeAgo);
+              readableTime.textContent =
+                "Last updated: " +
+                formatTimestamp(data.timestamp) +
+                " (" +
+                timeAgo +
+                ")";
+            } else {
+              // Fresh data - Photon2 is connected
+              updateConnectionStatus("connected");
+              readableTime.textContent =
+                "Last updated: " + formatTimestamp(data.timestamp);
+            }
+
+            isFirstMessage = false;
+          } else {
+            // No timestamp, treat as current
+            dataTimestamp = Date.now();
+            updateConnectionStatus("connected");
+            readableTime.textContent =
+              "Last updated: " +
+              new Date().toLocaleString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true,
+              });
+          }
+
+          // updating the current value display
+          currentValue.textContent = "Light Level: " + lightReading;
+
+          // updating the gauge chart with the light level
+          if (gaugeChart) {
+            gaugeData.setValue(0, 1, lightReading);
+            gaugeChart.draw(gaugeData, gaugeOptions);
+          }
+        };
+
+        // Handle connection loss
+        client.onConnectionLost = function (responseObject) {
+          if (responseObject.errorCode !== 0) {
+            console.log("Connection lost:", responseObject.errorMessage);
+            updateConnectionStatus("disconnected");
+            currentValue.textContent = "Connection lost - reconnecting...";
+            setTimeout(connectToMQTT, 3000);
+          }
+        };
+
+        // connecting to the MQTT broker with WebSocket
+        client.connect({
+          onSuccess: function () {
+            console.log("Connected to MQTT broker");
+            updateConnectionStatus("connecting");
+            // subscribing to both topics after successfully connecting
+            client.subscribe("Photon2LightLevel");
+            client.subscribe("Photon2LEDControl"); // Subscribe to LED control for sync
+            currentValue.textContent = "Waiting for data...";
+          },
+          onFailure: function (error) {
+            console.log("Connection failed:", error);
+            updateConnectionStatus("disconnected");
+            currentValue.textContent = "Connection failed - retrying...";
+            setTimeout(connectToMQTT, 3000);
+          },
+        });
+      }
+    </script>
+  </body>
+</html>
