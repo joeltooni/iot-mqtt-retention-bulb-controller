@@ -1,0 +1,204 @@
+[
+    {
+        "id": "be5ba68c1080fbfd",
+        "type": "tab",
+        "label": "Q2_Part5_Enhanced",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "130a2bc16714ac01",
+        "type": "http in",
+        "z": "be5ba68c1080fbfd",
+        "name": "Light Data from Photon2",
+        "url": "/microcontrollerLightValue",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 170,
+        "y": 140,
+        "wires": [
+            [
+                "9d6a42643464df21",
+                "3f8e9d2a5b1c4e67"
+            ]
+        ]
+    },
+    {
+        "id": "9d6a42643464df21",
+        "type": "function",
+        "z": "be5ba68c1080fbfd",
+        "name": "Add timestamp",
+        "func": "msg.payload.timestamp = new Date().toISOString();\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 140,
+        "wires": [
+            [
+                "a507c974595783fb",
+                "e0241355cf6e52b0"
+            ]
+        ]
+    },
+    {
+        "id": "e0241355cf6e52b0",
+        "type": "mqtt out",
+        "z": "be5ba68c1080fbfd",
+        "name": "Publish Light Data (Retained)",
+        "topic": "Photon2LightLevel",
+        "qos": "1",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "200ce6d675fa0f48",
+        "x": 680,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "a507c974595783fb",
+        "type": "debug",
+        "z": "be5ba68c1080fbfd",
+        "name": "Light Data Debug",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 690,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "3f8e9d2a5b1c4e67",
+        "type": "function",
+        "z": "be5ba68c1080fbfd",
+        "name": "Get LED State & Respond",
+        "func": "// Get the current LED state from context (default OFF)\nlet ledState = context.get('ledState') || 'OFF';\n\n// Send LED state back to Photon2 in HTTP response\nmsg.payload = {\n    led: ledState,\n    status: 'ok'\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 460,
+        "y": 220,
+        "wires": [
+            [
+                "eabd872d76f57aea"
+            ]
+        ]
+    },
+    {
+        "id": "eabd872d76f57aea",
+        "type": "http response",
+        "z": "be5ba68c1080fbfd",
+        "name": "HTTP Response with LED State",
+        "statusCode": "200",
+        "headers": {},
+        "x": 730,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "2a3b4c5d6e7f8901",
+        "type": "mqtt in",
+        "z": "be5ba68c1080fbfd",
+        "name": "LED Control from Web",
+        "topic": "Photon2LEDControl",
+        "qos": "1",
+        "datatype": "json",
+        "broker": "200ce6d675fa0f48",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 360,
+        "wires": [
+            [
+                "4b5c6d7e8f901234"
+            ]
+        ]
+    },
+    {
+        "id": "4b5c6d7e8f901234",
+        "type": "function",
+        "z": "be5ba68c1080fbfd",
+        "name": "Store LED State",
+        "func": "// Parse the incoming LED command\nlet ledCommand = msg.payload.led;\n\n// Store the LED state in context so it can be sent to Photon2\ncontext.set('ledState', ledCommand);\n\nnode.status({fill: ledCommand === 'ON' ? 'green' : 'grey', shape: 'dot', text: 'LED: ' + ledCommand});\n\n// Keep original payload for debugging\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 360,
+        "wires": [
+            [
+                "5c6d7e8f90123456"
+            ]
+        ]
+    },
+    {
+        "id": "5c6d7e8f90123456",
+        "type": "debug",
+        "z": "be5ba68c1080fbfd",
+        "name": "LED Command Debug",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 680,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "200ce6d675fa0f48",
+        "type": "mqtt-broker",
+        "name": "Local Mosquitto",
+        "broker": "localhost",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]
