@@ -2,8 +2,17 @@
 
 A real-time IoT system that leverages **MQTT message retention** and **QoS Level 1** for reliable state management between a Particle Photon2 microcontroller and multiple web clients.
 
-![Web Interface](screenshot.png)
-*User Interface showing real-time light monitoring and LED control*
+## 📸 Screenshots
+
+### Web User Interface
+
+![Web Interface](images/web-ui-screenshot.png)
+*Real-time light monitoring dashboard with animated bulb visualization and LED control switch*
+
+### Node-RED Flow
+
+![Node-RED Flow](images/node-red-flow-screenshot.png)
+*Node-RED flow showing HTTP input, timestamp addition, MQTT publish with retention, and LED state management*
 
 ## 📋 Project Overview
 
@@ -90,6 +99,7 @@ allow_anonymous true
 ```
 
 Restart Mosquitto:
+
 ```bash
 sudo systemctl restart mosquitto
 ```
@@ -193,21 +203,25 @@ Final_Project/
 ## 🎓 Key Concepts Demonstrated
 
 ### 1. Message Retention
+
 - Broker stores last message on each topic
 - New subscribers receive it immediately
 - Cleared by publishing empty payload with retain flag
 
 ### 2. Quality of Service
+
 - **QoS 0:** Fire and forget
 - **QoS 1:** At least once delivery (used in this project)
 - **QoS 2:** Exactly once delivery
 
 ### 3. Connection Monitoring
+
 - **Timeout:** 8 seconds (allows one missed reading)
 - **Check Interval:** 500ms for instant detection
 - **Photon2 Interval:** 5 seconds between readings
 
 ### 4. Multi-Client Synchronization
+
 - Client ID filtering prevents self-triggering
 - Retained messages ensure consistency
 - WebSocket enables real-time updates
@@ -234,27 +248,50 @@ const PHOTON_INTERVAL = 5000;      // 5 seconds (in firmware)
 ## 🐛 Troubleshooting
 
 **LED toggles on its own:**
+
 - Ensure Node-RED flow doesn't have republish loop
 - Check that only web clients publish to LED control topic
 
 **Connection shows "Stale" immediately:**
+
 - Check Photon2 is powered and connected
 - Verify MQTT broker is running
 - Confirm firewall allows port 1883
 
 **Web clients not syncing:**
+
 - Verify all clients subscribe to `Photon2LEDControl`
 - Check retain flag is set on LED control messages
 - Ensure client ID filtering is working
 
 **Debug output not showing in Node-RED:**
+
 - Refresh Node-RED browser page
 - Check debug panel is open (bug icon)
 - Verify debug nodes are deployed
 
-## 📸 Screenshots
+## 📷 How to Add Screenshots
 
-Take a screenshot of your running system at `http://YOUR_IP:3004/index.html` and save it as `screenshot.png` in the project root.
+To complete the documentation, add your own screenshots:
+
+1. **Web UI Screenshot:**
+   - Open the application at `http://YOUR_IP:3004/index.html`
+   - Take a screenshot showing the bulb, LED switch, gauge, and connection status
+   - Save as `images/web-ui-screenshot.png`
+
+2. **Node-RED Flow Screenshot:**
+   - Open Node-RED at `http://YOUR_IP:1880`
+   - Navigate to your flow tab
+   - Take a screenshot showing the complete flow with all nodes
+   - Save as `images/node-red-flow-screenshot.png`
+
+3. **Commit the screenshots:**
+
+   ```bash
+   git add images/
+   git commit -m "Add project screenshots"
+   git push
+   ```
 
 ## 🤝 Contributing
 

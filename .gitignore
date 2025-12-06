@@ -20,12 +20,12 @@ Thumbs.db
 .env
 .env.local
 
-# Ignore screenshots (user should take their own)
-screenshot.png
-
 # Ignore logs
 *.log
 
 # Ignore temporary files
 *.tmp
 *.temp
+
+# Note: Keep images/ directory for project screenshots
+# Add your screenshots to images/ folder and commit them
