@@ -190,14 +190,21 @@ sudo journalctl -u mosquitto -f
 
 ```
 Final_Project/
-├── index.js                      # Express web server
-├── package.json                  # Node.js dependencies
+├── index.js                           # Express web server (port 3004)
+├── package.json                       # Node.js dependencies
+├── package-lock.json                  # Locked dependency versions
+├── .gitignore                         # Git ignore rules
+├── README.md                          # This file - project documentation
 ├── public/
-│   └── index.html               # Web UI (MQTT client)
-├── light_sensor.ino             # Photon2 firmware
-├── node-red-flow-updated.json   # Node-RED flow with retention
-├── presentation.html            # Project presentation slides
-└── README.md                    # This file
+│   └── index.html                    # Web UI with MQTT client and LED control
+├── images/
+│   ├── web-ui-screenshot.png         # Screenshot of web interface
+│   ├── node-red-flow-screenshot.png  # Screenshot of Node-RED flow
+│   └── README.md                     # Images directory documentation
+├── light_sensor.ino                   # Photon2 firmware (Arduino/C++)
+├── node-red-flow-updated.json        # Node-RED flow with MQTT retention
+├── presentation.html                  # Interactive HTML presentation slides
+└── IoT Project Presentation.pdf      # PDF version of presentation
 ```
 
 ## 🎓 Key Concepts Demonstrated
